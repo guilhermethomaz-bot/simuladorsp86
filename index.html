@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Simulador MÁXIMO — SP86</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --y:#FFE600;--bl:#063361;--w:#fff;--dk:#2b2b2b;
+  --gn:#1b5e20;--gnm:#43a047;--gnbg:#e8f5e9;
+  --am:#e65100;--ambg:#fff3e0;
+  --rd:#b71c1c;--rdbg:#ffebee;
+  --g:#f0f0f0;--g2:#fafafa;--bdr:#ddd;
+  --sh:0 2px 12px rgba(6,51,97,.10);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#e4e8ef;color:var(--dk);min-height:100vh}
+
+/* HEADER */
+header{background:var(--bl);padding:14px 24px;border-bottom:4px solid var(--y);
+  display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hdr-brand h1{font-size:20px;font-weight:900;color:var(--y);line-height:1.1}
+.hdr-brand p{font-size:10px;color:#7fa8d4;margin-top:2px;font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.upload-label{cursor:pointer;background:var(--y);color:var(--bl);border-radius:8px;
+  padding:8px 14px;font-size:11px;font-weight:800;white-space:nowrap;display:block}
+.upload-label input{display:none}
+#upd{color:#7fa8d4;font-size:10px;font-weight:700;text-align:right}
+
+/* SELECTOR */
+#selector-wrap{padding:20px 24px 0}
+.sel-card{background:var(--w);border-radius:12px;padding:20px 24px;box-shadow:var(--sh);
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.sel-card label{font-size:13px;font-weight:800;color:var(--bl);white-space:nowrap}
+.sel-card select{flex:1;min-width:240px;padding:10px 14px;border:2px solid var(--bdr);
+  border-radius:8px;font-size:14px;font-weight:700;color:var(--dk);background:var(--w);
+  cursor:pointer;outline:none;transition:border .2s}
+.sel-card select:focus{border-color:var(--bl)}
+.sel-card select:hover{border-color:var(--bl)}
+.exec-type-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;white-space:nowrap}
+.badge-e12{background:var(--bl);color:var(--y)}
+.badge-e3{background:#4a148c;color:#fff}
+
+/* MAIN LAYOUT */
+#main{display:grid;grid-template-columns:1fr 380px;gap:16px;padding:16px 24px 32px;align-items:start}
+@media(max-width:900px){#main{grid-template-columns:1fr}}
+
+/* LEFT: KPI SLIDERS */
+#kpi-panel{display:flex;flex-direction:column;gap:12px}
+.kpi-block{background:var(--w);border-radius:12px;padding:18px;box-shadow:var(--sh);border:2px solid var(--bdr)}
+.kpi-block.active{border-color:var(--gnm)}
+.kpi-block.warn{border-color:var(--am)}
+.kpi-block.crit{border-color:var(--rd)}
+.kpi-block.disabled{opacity:.45;pointer-events:none;border-style:dashed}
+.kb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.kb-title{display:flex;align-items:center;gap:8px}
+.kb-title h3{font-size:14px;font-weight:800;color:var(--dk)}
+.kb-peso{background:#eef4ff;color:var(--bl);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800}
+.kb-peso.e3{background:var(--gnbg);color:var(--gn)}
+.kb-atg-now{font-size:22px;font-weight:900;line-height:1}
+.kb-atg-lbl{font-size:9px;font-weight:700;color:#aaa;text-transform:uppercase;margin-top:1px;text-align:right}
+
+/* Slider container */
+.slider-wrap{margin-bottom:14px}
+.slider-labels{display:flex;justify-content:space-between;margin-bottom:6px}
+.sl-left{font-size:12px;color:#888}
+.sl-right{font-size:13px;font-weight:800}
+input[type=range]{width:100%;-webkit-appearance:none;height:8px;border-radius:4px;outline:none;cursor:pointer;transition:background .3s}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--bl);cursor:pointer;border:3px solid var(--y);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.1)}
+
+/* Sub-KPI grid */
+.sub-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0}
+.sub-item{background:var(--g2);border-radius:8px;padding:8px 10px;border:1px solid var(--bdr)}
+.sub-lbl{font-size:9px;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.sub-val{font-size:13px;font-weight:900;color:var(--dk)}
+.sub-meta{font-size:10px;color:#888;margin-top:1px}
+.sub-bar{height:4px;background:#eee;border-radius:2px;margin-top:5px}
+.sub-bar-f{height:4px;border-radius:2px;transition:width .4s}
+
+/* MAS faixas */
+.faixas{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0}
+.faixa{background:var(--g2);border-radius:6px;padding:6px 4px;text-align:center;border:1px solid var(--bdr)}
+.faixa .fl{font-size:8px;font-weight:800;color:#aaa;text-transform:uppercase;margin-bottom:2px}
+.faixa .fv{font-size:14px;font-weight:900;color:var(--dk)}
+.faixa .fp{font-size:8px;color:#888;margin-top:1px}
+
+/* TPV breakdown */
+.tpv-rows{margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0;display:flex;flex-direction:column;gap:6px}
+.tpv-row{display:flex;align-items:center;gap:8px}
+.tpv-row .tr-lbl{font-size:11px;color:#555;flex:0 0 120px}
+.tpv-row .tr-bar{flex:1;height:6px;background:#eee;border-radius:3px}
+.tpv-row .tr-bf{height:6px;border-radius:3px;transition:width .4s}
+.tpv-row .tr-val{font-size:11px;font-weight:800;flex:0 0 80px;text-align:right}
+.tpv-total{background:#eef4ff;border-radius:8px;padding:8px 10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+.tpv-total .ttl{font-size:11px;font-weight:700;color:var(--bl)}
+.tpv-total .ttv{font-size:14px;font-weight:900;color:var(--bl)}
+
+/* RIGHT: RESULT PANEL */
+#result-panel{position:sticky;top:16px;display:flex;flex-direction:column;gap:12px}
+.atg-gauge{background:var(--bl);border-radius:14px;padding:20px;box-shadow:var(--sh);text-align:center}
+.ag-title{font-size:10px;font-weight:800;color:#7fa8d4;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.ag-circle{width:130px;height:130px;border-radius:50%;margin:0 auto 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:5px solid;transition:all .4s}
+.ag-num{font-size:38px;font-weight:900;line-height:1;transition:color .3s}
+.ag-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;color:rgba(255,255,255,.6)}
+.ag-delta{font-size:12px;font-weight:800;margin-top:4px}
+.ag-bonus{background:var(--y);color:var(--bl);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:900;display:inline-block;margin:8px auto 0;border:2px solid rgba(255,255,255,.3)}
+.ag-no-bonus{color:#7fa8d4;font-size:11px;margin-top:4px}
+
+/* Pilar contributions */
+.pilares{background:var(--w);border-radius:12px;padding:16px;box-shadow:var(--sh)}
+.pilares h4{font-size:10px;font-weight:800;color:var(--bl);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.pilar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pr-lbl{font-size:11px;color:#555;flex:0 0 110px}
+.pr-bar{flex:1;height:7px;background:#eee;border-radius:4px;position:relative}
+.pr-fill{height:7px;border-radius:4px;transition:width .4s}
+.pr-100{position:absolute;top:-2px;bottom:-2px;width:2px;background:rgba(6,51,97,.2);border-radius:1px}
+.pr-pct{font-size:11px;font-weight:800;flex:0 0 36px;text-align:right}
+.pr-contrib{font-size:9px;color:#aaa;flex:0 0 40px;text-align:right}
+
+/* Action Plan */
+.plan-card{background:var(--w);border-radius:12px;padding:16px;box-shadow:var(--sh)}
+.plan-card h4{font-size:11px;font-weight:800;color:var(--bl);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:6px;padding-bottom:8px;border-bottom:2px solid var(--y)}
+.plan-item{display:flex;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:9px;border:1px solid var(--bdr)}
+.plan-item.urg{background:var(--rdbg);border-color:var(--rd)}
+.plan-item.ok{background:var(--gnbg);border-color:var(--gnm)}
+.plan-item.warn{background:var(--ambg);border-color:var(--am)}
+.plan-item.info{background:#eef4ff;border-color:#b3c8e8}
+.pi-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.pi-body{}
+.pi-title{font-size:12px;font-weight:800;color:var(--dk);margin-bottom:4px}
+.pi-desc{font-size:11px;color:#555;line-height:1.55}
+.pi-meta{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.pi-tag{background:rgba(6,51,97,.1);color:var(--bl);padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700}
+
+/* What-if hint */
+.what-if{background:var(--bl);border-radius:10px;padding:12px 14px;margin-top:2px}
+.wi-title{font-size:9px;font-weight:800;color:#7fa8d4;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.wi-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:11px}
+.wi-kpi{color:#aac4e0}
+.wi-val{color:var(--y);font-weight:800}
+
+/* Empty state */
+#empty-state{grid-column:1/-1;background:var(--w);border-radius:12px;padding:48px;text-align:center;box-shadow:var(--sh)}
+#empty-state .es-ico{font-size:48px;margin-bottom:12px}
+#empty-state p{font-size:14px;color:#aaa;font-weight:600}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;z-index:500;padding:11px 18px;border-radius:10px;
+  font-size:13px;font-weight:700;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.2);
+  transition:opacity .4s;pointer-events:none;opacity:0}
+
+footer{background:var(--bl);color:#4a7aa8;padding:10px 24px;font-size:10px;text-align:center;border-top:3px solid var(--y)}
+footer span{color:var(--y);font-weight:700}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#f0f0f0}::-webkit-scrollbar-thumb{background:#c0d0e0;border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-brand">
+    <h1>🧮 Simulador MÁXIMO — SP86</h1>
+    <p>Simule seus KPIs e veja o plano de ação para bater a meta</p>
+  </div>
+  <div class="hdr-right">
+    <div>
+      <div id="upd">Dados: CSV carregado</div>
+    </div>
+    <label class="upload-label">
+      ↑ Atualizar CSV
+      <input type="file" accept=".csv,text/csv,text/plain" onchange="loadCSV(event)">
+    </label>
+  </div>
+</header>
+
+<div id="selector-wrap">
+  <div class="sel-card">
+    <label for="exec-sel">Quem está simulando?</label>
+    <select id="exec-sel" onchange="onSelectExec(this.value)">
+      <option value="">— Selecione seu nome —</option>
+    </select>
+    <span id="tipo-badge" class="exec-type-badge badge-e12" style="display:none"></span>
+  </div>
+</div>
+
+<div id="main">
+  <div id="empty-state">
+    <div class="es-ico">👆</div>
+    <p>Selecione seu nome acima para iniciar a simulação</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<footer><span>JARVIS SP86</span> — Simulador MÁXIMO · Fora o Show</footer>
+
+<script>
+/* ══════════════ DATA (injected) ══════════════ */
+const EXEC_DATA = {
+  "ALINE NAVARRO VALENTE": {
+    "nm": "Aline Navarro",
+    "tipo": "e12",
+    "qtd_c": 5.0,
+    "m_c": 12.0,
+    "atg_c": 40.0,
+    "atg_point": 42.0,
+    "qtd_pix": 4.0,
+    "m_pix": 11.0,
+    "atg_pix": 36.0,
+    "total_mas": 18.0,
+    "pond_mas": 5.0,
+    "m_mas": 20.0,
+    "atg_mas": 25.0,
+    "f1": 16.0,
+    "f2": 1.0,
+    "f3": 0.0,
+    "f4": 0.0,
+    "f5": 1.0,
+    "tpv_deb": 228198.0,
+    "tpv_deb_p": 114099.0,
+    "tpv_c1x": 78510.0,
+    "tpv_c1x_p": 78510.0,
+    "tpv_parc": 51422.0,
+    "tpv_parc_p": 102844.0,
+    "tpv_tot": 358130.0,
+    "m_tpv": 798938.0,
+    "atg_tpv": 37.0,
+    "atg_pri_tpv": 30.0,
+    "atg_pri": 11.0,
+    "atg_perf": 32.0
+  },
+  "BARBARA FRANCINE ALVES FLORENTINO MORETTI": {
+    "nm": "Bárbara Moretti",
+    "tipo": "e12",
+    "qtd_c": 11.0,
+    "m_c": 12.0,
+    "atg_c": 94.0,
+    "atg_point": 92.0,
+    "qtd_pix": 11.0,
+    "m_pix": 11.0,
+    "atg_pix": 100.0,
+    "total_mas": 14.0,
+    "pond_mas": 8.0,
+    "m_mas": 9.0,
+    "atg_mas": 89.0,
+    "f1": 10.0,
+    "f2": 1.0,
+    "f3": 1.0,
+    "f4": 2.0,
+    "f5": 0.0,
+    "tpv_deb": 189215.0,
+    "tpv_deb_p": 94607.0,
+    "tpv_c1x": 83016.0,
+    "tpv_c1x_p": 83016.0,
+    "tpv_parc": 109958.0,
+    "tpv_parc_p": 219917.0,
+    "tpv_tot": 382189.0,
+    "m_tpv": 462726.0,
+    "atg_tpv": 86.0,
+    "atg_pri_tpv": 79.0,
+    "atg_pri": 68.0,
+    "atg_perf": 86.0
+  },
+  "CAMILA PALMEIRA HIPOLITO": {
+    "nm": "Camila Palmeira",
+    "tipo": "e3",
+    "qtd_c": 10.0,
+    "m_c": 6.0,
+    "atg_c": 171.0,
+    "atg_point": 167.0,
+    "qtd_pix": 9.0,
+    "m_pix": 5.0,
+    "atg_pix": 180.0,
+    "total_mas": 21.0,
+    "pond_mas": 7.0,
+    "m_mas": 10.0,
+    "atg_mas": 70.0,
+    "f1": 17.0,
+    "f2": 2.0,
+    "f3": 2.0,
+    "f4": 0.0,
+    "f5": 0.0,
+    "tpv_deb": 239076.0,
+    "tpv_deb_p": 119538.0,
+    "tpv_c1x": 78408.0,
+    "tpv_c1x_p": 78408.0,
+    "tpv_parc": 357304.0,
+    "tpv_parc_p": 714609.0,
+    "tpv_tot": 674789.0,
+    "m_tpv": 945091.0,
+    "atg_tpv": 97.0,
+    "atg_pri_tpv": 102.0,
+    "atg_pri": 99.0,
+    "atg_perf": 114.0
+  },
+  "CRISTIANE LOPES DA SILVA FERNANDES": {
+    "nm": "Cristiane Fernandes",
+    "tipo": "e12",
+    "qtd_c": 9.0,
+    "m_c": 12.0,
+    "atg_c": 77.0,
+    "atg_point": 75.0,
+    "qtd_pix": 9.0,
+    "m_pix": 11.0,
+    "atg_pix": 82.0,
+    "total_mas": 22.0,
+    "pond_mas": 21.0,
+    "m_mas": 20.0,
+    "atg_mas": 105.0,
+    "f1": 12.0,
+    "f2": 5.0,
+    "f3": 1.0,
+    "f4": 2.0,
+    "f5": 2.0,
+    "tpv_deb": 244414.0,
+    "tpv_deb_p": 122207.0,
+    "tpv_c1x": 78438.0,
+    "tpv_c1x_p": 78438.0,
+    "tpv_parc": 505421.0,
+    "tpv_parc_p": 1010842.0,
+    "tpv_tot": 828273.0,
+    "m_tpv": 785862.0,
+    "atg_tpv": 154.0,
+    "atg_pri_tpv": 134.0,
+    "atg_pri": 200.0,
+    "atg_perf": 147.0
+  },
+  "ELAINE PREBELLI": {
+    "nm": "Elaine Prebelli",
+    "tipo": "e12",
+    "qtd_c": 9.0,
+    "m_c": 12.0,
+    "atg_c": 74.0,
+    "atg_point": 75.0,
+    "qtd_pix": 8.0,
+    "m_pix": 11.0,
+    "atg_pix": 73.0,
+    "total_mas": 25.0,
+    "pond_mas": 9.0,
+    "m_mas": 20.0,
+    "atg_mas": 45.0,
+    "f1": 19.0,
+    "f2": 4.0,
+    "f3": 2.0,
+    "f4": 0.0,
+    "f5": 0.0,
+    "tpv_deb": 169688.0,
+    "tpv_deb_p": 84844.0,
+    "tpv_c1x": 83828.0,
+    "tpv_c1x_p": 83828.0,
+    "tpv_parc": 134138.0,
+    "tpv_parc_p": 268276.0,
+    "tpv_tot": 387654.0,
+    "m_tpv": 767665.0,
+    "atg_tpv": 57.0,
+    "atg_pri_tpv": 47.0,
+    "atg_pri": 27.0,
+    "atg_perf": 53.0
+  },
+  "ERIC DE CALDAS DUTRA": {
+    "nm": "Eric de Caldas",
+    "tipo": "e12",
+    "qtd_c": 12.0,
+    "m_c": 12.0,
+    "atg_c": 100.0,
+    "atg_point": 100.0,
+    "qtd_pix": 11.0,
+    "m_pix": 11.0,
+    "atg_pix": 100.0,
+    "total_mas": 25.0,
+    "pond_mas": 9.0,
+    "m_mas": 20.0,
+    "atg_mas": 45.0,
+    "f1": 20.0,
+    "f2": 2.0,
+    "f3": 2.0,
+    "f4": 1.0,
+    "f5": 0.0,
+    "tpv_deb": 181763.0,
+    "tpv_deb_p": 90882.0,
+    "tpv_c1x": 91410.0,
+    "tpv_c1x_p": 91410.0,
+    "tpv_parc": 222700.0,
+    "tpv_parc_p": 445400.0,
+    "tpv_tot": 495873.0,
+    "m_tpv": 573894.0,
+    "atg_tpv": 109.0,
+    "atg_pri_tpv": 123.0,
+    "atg_pri": 134.0,
+    "atg_perf": 112.0
+  },
+  "LUIS FERNANDO AMORIM": {
+    "nm": "Luis Fernando",
+    "tipo": "e12",
+    "qtd_c": 9.0,
+    "m_c": 12.0,
+    "atg_c": 77.0,
+    "atg_point": 75.0,
+    "qtd_pix": 9.0,
+    "m_pix": 11.0,
+    "atg_pix": 82.0,
+    "total_mas": 19.0,
+    "pond_mas": 12.0,
+    "m_mas": 20.0,
+    "atg_mas": 60.0,
+    "f1": 14.0,
+    "f2": 1.0,
+    "f3": 2.0,
+    "f4": 1.0,
+    "f5": 1.0,
+    "tpv_deb": 99855.0,
+    "tpv_deb_p": 49928.0,
+    "tpv_c1x": 94231.0,
+    "tpv_c1x_p": 94231.0,
+    "tpv_parc": 230760.0,
+    "tpv_parc_p": 461519.0,
+    "tpv_tot": 424846.0,
+    "m_tpv": 705672.0,
+    "atg_tpv": 86.0,
+    "atg_pri_tpv": 77.0,
+    "atg_pri": 66.0,
+    "atg_perf": 75.0
+  },
+  "PALOMA CASULA DA SILVA": {
+    "nm": "Paloma Casula",
+    "tipo": "e12",
+    "qtd_c": 1.0,
+    "m_c": 8.0,
+    "atg_c": 13.0,
+    "atg_point": 13.0,
+    "qtd_pix": 1.0,
+    "m_pix": 7.0,
+    "atg_pix": 14.0,
+    "total_mas": 3.0,
+    "pond_mas": 0.0,
+    "m_mas": 1.0,
+    "atg_mas": 0.0,
+    "f1": 3.0,
+    "f2": 0.0,
+    "f3": 0.0,
+    "f4": 0.0,
+    "f5": 0.0,
+    "tpv_deb": 15742.0,
+    "tpv_deb_p": 7871.0,
+    "tpv_c1x": 5523.0,
+    "tpv_c1x_p": 5523.0,
+    "tpv_parc": 6020.0,
+    "tpv_parc_p": 12040.0,
+    "tpv_tot": 27284.0,
+    "m_tpv": 129789.0,
+    "atg_tpv": 20.0,
+    "atg_pri_tpv": 15.0,
+    "atg_pri": 3.0,
+    "atg_perf": 12.0
+  },
+  "RAFAEL SOARES GONCALVES": {
+    "nm": "Rafael Soares",
+    "tipo": "e12",
+    "qtd_c": 3.0,
+    "m_c": 8.0,
+    "atg_c": 39.0,
+    "atg_point": 38.0,
+    "qtd_pix": 3.0,
+    "m_pix": 7.0,
+    "atg_pix": 43.0,
+    "total_mas": 3.0,
+    "pond_mas": 3.0,
+    "m_mas": 3.0,
+    "atg_mas": 100.0,
+    "f1": 2.0,
+    "f2": 0.0,
+    "f3": 1.0,
+    "f4": 0.0,
+    "f5": 0.0,
+    "tpv_deb": 9090.0,
+    "tpv_deb_p": 4545.0,
+    "tpv_c1x": 7597.0,
+    "tpv_c1x_p": 7597.0,
+    "tpv_parc": 29928.0,
+    "tpv_parc_p": 59856.0,
+    "tpv_tot": 46615.0,
+    "m_tpv": 214434.0,
+    "atg_tpv": 34.0,
+    "atg_pri_tpv": 29.0,
+    "atg_pri": 10.0,
+    "atg_perf": 53.0
+  },
+  "SIGLIND MOREIRA DE OLIVEIRA": {
+    "nm": "Siglind Moreira",
+    "tipo": "e12",
+    "qtd_c": 3.0,
+    "m_c": 8.0,
+    "atg_c": 35.0,
+    "atg_point": 38.0,
+    "qtd_pix": 2.0,
+    "m_pix": 7.0,
+    "atg_pix": 29.0,
+    "total_mas": 0.0,
+    "pond_mas": 0.0,
+    "m_mas": 1.0,
+    "atg_mas": 0.0,
+    "f1": 0,
+    "f2": 0,
+    "f3": 0,
+    "f4": 0,
+    "f5": 0,
+    "tpv_deb": 345.0,
+    "tpv_deb_p": 173.0,
+    "tpv_c1x": 340.0,
+    "tpv_c1x_p": 340.0,
+    "tpv_parc": 0.0,
+    "tpv_parc_p": 0.0,
+    "tpv_tot": 685.0,
+    "m_tpv": 129789.0,
+    "atg_tpv": 0.0,
+    "atg_pri_tpv": 0.0,
+    "atg_pri": 0.0,
+    "atg_perf": 4.0
+  }
+};
+
+</script>
+<script>
+/* ══════════════ LOGIC ══════════════ */
+
+let curExec = null; // current exec key
+let sim = {};       // {c, m, t, p} simulated ATG values
+
+// ── Helpers ──
+function bc(x){ if(x===null||x===undefined)return'#ccc'; if(x>=100)return'#43a047'; if(x>=70)return'#fb8c00'; return'#e53935'; }
+function fK(x){ if(!x)return'R$0'; if(x>=1e6)return'R$'+(x/1e6).toFixed(1)+'M'; if(x>=1000)return'R$'+(x/1000).toFixed(0)+'k'; return'R$'+Math.round(x); }
+function pf(x){ return x?Math.round(x)+'%':'0%'; }
+function pesos(tipo){ return tipo==='e3'?{c:0,m:20,t:40,p:40}:{c:10,m:30,t:35,p:25}; }
+function calcATG(sc,sm,st,sp,tipo){
+  const w=pesos(tipo);
+  return Math.round(sc*w.c/100 + sm*w.m/100 + st*w.t/100 + sp*w.p/100);
+}
+function toast(msg,ok){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.background=ok?'#1b5e20':'#b71c1c'; el.style.color='#fff';
+  el.style.opacity='1'; clearTimeout(el._t); el._t=setTimeout(()=>{el.style.opacity='0';},3500);
+}
+function parseCSV(raw){
+  if(raw.charCodeAt(0)===0xFEFF) raw=raw.slice(1);
+  raw=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+  const lines=raw.split('\n').filter(l=>l.trim());
+  if(!lines.length) return [];
+  const sep=lines[0].split(';').length>lines[0].split(',').length?';':',';
+  const hdrs=lines[0].split(sep).map(h=>h.replace(/[\r\n"']/g,'').trim());
+  return lines.slice(1).map(line=>{
+    const vals=line.split(sep);
+    const o={};
+    hdrs.forEach((h,i)=>{ o[h]=(vals[i]||'').replace(/[\r\n"']/g,'').trim(); });
+    return o;
+  }).filter(r=>r.NOME&&r.NOME.trim().length>0);
+}
+function nv(x){ const v=parseFloat(x); return isNaN(v)?0:v; }
+
+// ── CSV Loader ──
+function loadCSV(e){
+  const file=e.target.files&&e.target.files[0]; e.target.value='';
+  if(!file)return;
+  const r=new FileReader();
+  r.onerror=()=>toast('Erro ao ler o arquivo.',false);
+  r.onload=ev=>{
+    try{
+      const rows=parseCSV(ev.target.result);
+      if(!rows.length){toast('CSV sem dados reconhecidos.',false);return;}
+      // Update EXEC_DATA
+      rows.forEach(row=>{
+        const nome=row.NOME;
+        if(!EXEC_DATA[nome])return;
+        const d=EXEC_DATA[nome];
+        d.qtd_c=nv(row.QTD_CONQUISTA); d.m_c=nv(row.M_CONQUISTA); d.atg_c=nv(row.ATG_CONQUISTA);
+        d.atg_point=nv(row.ATG_POINT); d.qtd_pix=nv(row.QTD_PIX); d.m_pix=nv(row.M_CHAVE_PIX); d.atg_pix=nv(row.ATG_PIX);
+        d.total_mas=nv(row.TOTAL_MAS); d.pond_mas=nv(row.TOTAL_MAS_POND); d.m_mas=nv(row.M_MAS); d.atg_mas=nv(row.ATG_MAS);
+        d.f1=nv(row.MAS_FAIXA_1); d.f2=nv(row.MAS_FAIXA_2); d.f3=nv(row.MAS_FAIXA_3); d.f4=nv(row.MAS_FAIXA_4); d.f5=nv(row.MAS_FAIXA_5);
+        d.tpv_deb=nv(row.TPV_DEBITO); d.tpv_deb_p=nv(row.TPV_DEBITO_POND);
+        d.tpv_c1x=nv(row.TPV_CREDITO1X); d.tpv_c1x_p=nv(row.TPV_CREDITO1X_POND);
+        d.tpv_parc=nv(row.TPV_PARCELADO); d.tpv_parc_p=nv(row.TPV_PARCELADO_POND);
+        d.tpv_tot=nv(row.TPV_TOTAL); d.m_tpv=nv(row.M_TPV); d.atg_tpv=nv(row.ATG_TPV);
+        d.atg_pri_tpv=nv(row.ATG_PRI_TPV); d.atg_pri=nv(row.ATG_PRI_FINAL);
+        d.atg_perf=nv(row.ATG_PERFORMANCE);
+      });
+      document.getElementById('upd').textContent='CSV atualizado ✓';
+      toast('✅ Dados atualizados para '+rows.length+' executivos!',true);
+      if(curExec) onSelectExec(curExec);
+    }catch(err){toast('Erro: '+err.message,false);}
+  };
+  r.readAsText(file,'UTF-8');
+}
+
+// ── Select exec ──
+function onSelectExec(nome){
+  curExec=nome;
+  if(!nome||!EXEC_DATA[nome]){
+    document.getElementById('main').innerHTML='<div id="empty-state"><div class="es-ico">👆</div><p>Selecione seu nome acima para iniciar a simulação</p></div>';
+    document.getElementById('tipo-badge').style.display='none';
+    return;
+  }
+  const d=EXEC_DATA[nome];
+  // Init sim with current CSV values
+  sim={c:d.atg_c, m:d.atg_mas, t:d.atg_tpv, p:d.atg_pri};
+  // Badge
+  const badge=document.getElementById('tipo-badge');
+  badge.style.display='inline-block';
+  badge.textContent=d.tipo==='e3'?'Exec 3':'Exec 1/2';
+  badge.className='exec-type-badge '+(d.tipo==='e3'?'badge-e3':'badge-e12');
+  renderMain();
+}
+
+// ── Render ──
+function renderMain(){
+  const d=EXEC_DATA[curExec]; if(!d) return;
+  const w=pesos(d.tipo);
+  const atg=calcATG(sim.c,sim.m,sim.t,sim.p,d.tipo);
+  const orig=d.atg_perf;
+  const delta=atg-orig;
+  const atgC=bc(atg);
+
+  document.getElementById('main').innerHTML=
+    '<div id="kpi-panel">'+buildKPIPanel(d,w)+'</div>'+
+    '<div id="result-panel">'+buildResultPanel(d,w,atg,delta,atgC)+'</div>';
+}
+
+// ── KPI Panel ──
+function buildKPIPanel(d,w){
+  return buildConqBlock(d,w) + buildMASBlock(d,w) + buildTPVBlock(d,w) + buildPRIBlock(d,w);
+}
+
+function sliderBg(val,max){
+  const pct=Math.min(val,max)/max*100;
+  const c=bc(val/(max||100)*100);
+  return `background:linear-gradient(to right,${c} ${pct}%,#e0e8f0 ${pct}%)`;
+}
+
+function buildConqBlock(d,w){
+  if(w.c===0) return `<div class="kpi-block disabled">
+    <div class="kb-header">
+      <div class="kb-title"><h3>🎯 Conquista</h3><span class="kb-peso">0% — Não pontua</span></div>
+    </div>
+    <p style="font-size:12px;color:#aaa">A Conquista não pontua no MÁXIMO do Exec 3. Foco total em MAS, TPV e Pricing.</p>
+  </div>`;
+  const cls=sim.c>=100?'active':sim.c>=70?'warn':'crit';
+  const missing=Math.max(0,d.m_c-d.qtd_c);
+  const ptMissing=Math.max(0,d.m_pix-d.qtd_pix);
+  const maxSl=200;
+  return `<div class="kpi-block ${cls}">
+    <div class="kb-header">
+      <div class="kb-title"><h3>🎯 Conquista</h3><span class="kb-peso">${w.c}% do MÁXIMO</span></div>
+      <div><div class="kb-atg-now" style="color:${bc(sim.c)}">${pf(sim.c)}</div><div class="kb-atg-lbl">Simulado</div></div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels">
+        <span class="sl-left">Atual CSV: <b style="color:${bc(d.atg_c)}">${pf(d.atg_c)}</b></span>
+        <span class="sl-right" style="color:${bc(sim.c)}">${pf(sim.c)}</span>
+      </div>
+      <input type="range" min="0" max="${maxSl}" value="${sim.c}"
+        style="${sliderBg(sim.c,maxSl)}"
+        oninput="updSim('c',this.value,this)">
+    </div>
+    <div class="sub-kpis">
+      <div class="sub-item">
+        <div class="sub-lbl">com Point (70%)</div>
+        <div class="sub-val">${d.qtd_c} / ${d.m_c}</div>
+        <div class="sub-meta">ATG ${pf(d.atg_point)}</div>
+        <div class="sub-bar"><div class="sub-bar-f" style="width:${Math.min(d.atg_point,100)}%;background:${bc(d.atg_point)}"></div></div>
+      </div>
+      <div class="sub-item">
+        <div class="sub-lbl">com Chave PIX (30%)</div>
+        <div class="sub-val">${d.qtd_pix} / ${d.m_pix}</div>
+        <div class="sub-meta">ATG ${pf(d.atg_pix)}</div>
+        <div class="sub-bar"><div class="sub-bar-f" style="width:${Math.min(d.atg_pix,100)}%;background:${bc(d.atg_pix)}"></div></div>
+      </div>
+    </div>
+    ${missing>0||ptMissing>0?`<div style="background:#fff3e0;border-radius:7px;padding:8px 10px;margin-top:10px;font-size:11px;color:var(--am)">
+      ${missing>0?`<div>📍 Faltam <b>${missing} sellers</b> com Point para bater a meta (${d.qtd_c}/${d.m_c})</div>`:''}
+      ${ptMissing>0?`<div>📍 Faltam <b>${ptMissing} sellers</b> com Chave PIX (${d.qtd_pix}/${d.m_pix})</div>`:''}
+    </div>`:''}
+  </div>`;
+}
+
+function buildMASBlock(d,w){
+  const cls=sim.m>=100?'active':sim.m>=70?'warn':'crit';
+  const pondMissing=Math.max(0,d.m_mas-d.pond_mas);
+  const maxSl=200;
+  return `<div class="kpi-block ${cls}">
+    <div class="kb-header">
+      <div class="kb-title"><h3>🔗 MAS / Aderência</h3><span class="kb-peso ${d.tipo==='e3'?'e3':''}">${w.m}% do MÁXIMO</span></div>
+      <div><div class="kb-atg-now" style="color:${bc(sim.m)}">${pf(sim.m)}</div><div class="kb-atg-lbl">Simulado</div></div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels">
+        <span class="sl-left">Atual CSV: <b style="color:${bc(d.atg_mas)}">${pf(d.atg_mas)}</b></span>
+        <span class="sl-right" style="color:${bc(sim.m)}">${pf(sim.m)}</span>
+      </div>
+      <input type="range" min="0" max="${maxSl}" value="${sim.m}"
+        style="${sliderBg(sim.m,maxSl)}"
+        oninput="updSim('m',this.value,this)">
+    </div>
+    <div style="background:var(--g2);border-radius:7px;padding:8px 10px;border:1px solid var(--bdr);margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:#888">Ponderado atual</span>
+        <b style="color:${bc(d.atg_mas)}">${d.pond_mas} / ${d.m_mas} pts</b>
+      </div>
+      <div style="height:6px;background:#eee;border-radius:3px"><div style="height:6px;border-radius:3px;width:${Math.min(d.atg_mas,100)}%;background:${bc(d.atg_mas)};transition:width .4s"></div></div>
+      <div style="font-size:10px;color:#aaa;margin-top:4px">Sellers de M0 com faturamento >R$20k em M1 e M2</div>
+    </div>
+    <div class="faixas">
+      ${[1,2,3,4,5].map(f=>{const fv=d['f'+f]||0; return`<div class="faixa"><div class="fl">F${f}</div><div class="fv">${fv}</div><div class="fp">sellers</div></div>`;}).join('')}
+    </div>
+    ${pondMissing>0?`<div style="background:var(--ambg);border-radius:7px;padding:8px 10px;margin-top:10px;font-size:11px;color:var(--am)">
+      📍 Faltam <b>${pondMissing} pontos ponderados</b> para bater o MAS (${d.pond_mas}/${d.m_mas})
+    </div>`:''}
+  </div>`;
+}
+
+function buildTPVBlock(d,w){
+  const cls=sim.t>=100?'active':sim.t>=70?'warn':'crit';
+  const tpvGap=Math.max(0,d.m_tpv-d.tpv_tot);
+  const tpvPond=d.tpv_deb_p+d.tpv_c1x_p+d.tpv_parc_p;
+  const maxSl=200;
+  return `<div class="kpi-block ${cls}">
+    <div class="kb-header">
+      <div class="kb-title"><h3>💳 TPV Ponderado</h3><span class="kb-peso ${d.tipo==='e3'?'e3':''}">${w.t}% do MÁXIMO</span></div>
+      <div><div class="kb-atg-now" style="color:${bc(sim.t)}">${pf(sim.t)}</div><div class="kb-atg-lbl">Simulado</div></div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels">
+        <span class="sl-left">Atual CSV: <b style="color:${bc(d.atg_tpv)}">${pf(d.atg_tpv)}</b></span>
+        <span class="sl-right" style="color:${bc(sim.t)}">${pf(sim.t)}</span>
+      </div>
+      <input type="range" min="0" max="${maxSl}" value="${sim.t}"
+        style="${sliderBg(sim.t,maxSl)}"
+        oninput="updSim('t',this.value,this)">
+    </div>
+    <div class="tpv-rows">
+      <div class="tpv-row">
+        <span class="tr-lbl">Débito/PIX (×0.5)</span>
+        <div class="tr-bar"><div class="tr-bf" style="width:${d.m_tpv>0?Math.min(d.tpv_deb/d.m_tpv*100,100):0}%;background:#7986cb"></div></div>
+        <span class="tr-val" style="color:#5c6bc0">${fK(d.tpv_deb)}</span>
+      </div>
+      <div class="tpv-row">
+        <span class="tr-lbl">Crédito 1x (×1.0)</span>
+        <div class="tr-bar"><div class="tr-bf" style="width:${d.m_tpv>0?Math.min(d.tpv_c1x/d.m_tpv*100,100):0}%;background:#26a69a"></div></div>
+        <span class="tr-val" style="color:#00897b">${fK(d.tpv_c1x)}</span>
+      </div>
+      <div class="tpv-row">
+        <span class="tr-lbl">Parcelado (×2.0)</span>
+        <div class="tr-bar"><div class="tr-bf" style="width:${d.m_tpv>0?Math.min(d.tpv_parc/d.m_tpv*100,100):0}%;background:var(--gnm)"></div></div>
+        <span class="tr-val" style="color:var(--gn)">${fK(d.tpv_parc)}</span>
+      </div>
+    </div>
+    <div class="tpv-total">
+      <span class="ttl">TPV Ponderado Total</span>
+      <span class="ttv">${fK(tpvPond)} / ${fK(d.m_tpv)}</span>
+    </div>
+    ${tpvGap>0?`<div style="background:var(--ambg);border-radius:7px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--am)">
+      📍 Gap de <b>${fK(tpvGap)}</b> em TPV bruto para bater a meta
+    </div>`:''}
+  </div>`;
+}
+
+function buildPRIBlock(d,w){
+  const cls=sim.p>=100?'active':sim.p>=70?'warn':'crit';
+  const maxSl=200;
+  return `<div class="kpi-block ${cls}">
+    <div class="kb-header">
+      <div class="kb-title"><h3>📈 PRI / Pricing</h3><span class="kb-peso ${d.tipo==='e3'?'e3':''}">${w.p}% do MÁXIMO</span></div>
+      <div><div class="kb-atg-now" style="color:${bc(sim.p)}">${pf(sim.p)}</div><div class="kb-atg-lbl">Simulado</div></div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels">
+        <span class="sl-left">Atual CSV: <b style="color:${bc(d.atg_pri)}">${pf(d.atg_pri)}</b></span>
+        <span class="sl-right" style="color:${bc(sim.p)}">${pf(sim.p)}</span>
+      </div>
+      <input type="range" min="0" max="${maxSl}" value="${sim.p}"
+        style="${sliderBg(sim.p,maxSl)}"
+        oninput="updSim('p',this.value,this)">
+    </div>
+    <div class="sub-kpis">
+      <div class="sub-item">
+        <div class="sub-lbl">PRI sobre TPV</div>
+        <div class="sub-val" style="color:${bc(d.atg_pri_tpv)}">${pf(d.atg_pri_tpv)}</div>
+        <div class="sub-meta">Receita bruta / TPV</div>
+        <div class="sub-bar"><div class="sub-bar-f" style="width:${Math.min(d.atg_pri_tpv,100)}%;background:${bc(d.atg_pri_tpv)}"></div></div>
+      </div>
+      <div class="sub-item">
+        <div class="sub-lbl">PRI Final</div>
+        <div class="sub-val" style="color:${bc(d.atg_pri)}">${pf(d.atg_pri)}</div>
+        <div class="sub-meta">Índice combinado</div>
+        <div class="sub-bar"><div class="sub-bar-f" style="width:${Math.min(d.atg_pri,100)}%;background:${bc(d.atg_pri)}"></div></div>
+      </div>
+    </div>
+    <div style="background:#eef4ff;border-radius:7px;padding:8px 10px;margin-top:10px;font-size:11px;color:var(--bl)">
+      💡 Para melhorar o PRI: aumente o share de parcelado (multiplica 2x), onboarding de Mercado Crédito e produtos de maior taxa.
+    </div>
+  </div>`;
+}
+
+// ── Result Panel ──
+function buildResultPanel(d,w,atg,delta,atgC){
+  return buildGauge(d,atg,delta,atgC) + buildPilares(d,w,atg) + buildPlan(d,w,atg);
+}
+
+function buildGauge(d,atg,delta,atgC){
+  const bonus=atg>=100;
+  const borderC=atg>=100?'var(--gnm)':atg>=70?'var(--am)':'var(--rd)';
+  return `<div class="atg-gauge">
+    <div class="ag-title">Seu MÁXIMO Simulado</div>
+    <div class="ag-circle" id="ag-circle" style="border-color:${borderC}">
+      <div class="ag-num" id="ag-num" style="color:${atgC}">${atg}%</div>
+      <div class="ag-lbl">ATG</div>
+    </div>
+    <div style="font-size:11px;color:#7fa8d4;margin-bottom:6px">
+      CSV atual: <b style="color:${bc(d.atg_perf)}">${d.atg_perf}%</b>
+      &nbsp;|&nbsp; Simulado: <b style="color:${atgC}">${atg}%</b>
+      &nbsp;|&nbsp; Delta: <b style="color:${delta>=0?'#69f0ae':'#ff8a80'}">${delta>=0?'+':''}${delta}pp</b>
+    </div>
+    ${bonus?`<div class="ag-bonus">🎉 Bônus +20% Desbloqueado!</div>`:`<div class="ag-no-bonus">Precisa de ${100-atg}pp para o bônus +20%</div>`}
+  </div>`;
+}
+
+function buildPilares(d,w,atg){
+  const kpis=[
+    {lbl:'Conquista',peso:w.c,sim:sim.c,cur:d.atg_c},
+    {lbl:'MAS/Aderência',peso:w.m,sim:sim.m,cur:d.atg_mas},
+    {lbl:'TPV',peso:w.t,sim:sim.t,cur:d.atg_tpv},
+    {lbl:'PRI/Pricing',peso:w.p,sim:sim.p,cur:d.atg_pri}
+  ];
+  const rows=kpis.map(k=>{
+    if(k.peso===0) return `<div class="pilar-row">
+      <span class="pr-lbl" style="color:#aaa">${k.lbl}</span>
+      <div class="pr-bar"><div class="pr-fill" style="width:0%;background:#eee"></div><div class="pr-100" style="left:50%"></div></div>
+      <span class="pr-pct" style="color:#ccc">—</span>
+      <span class="pr-contrib" style="color:#ccc">0%</span>
+    </div>`;
+    const fill=Math.min(k.sim,200)/200*100;
+    const contrib=Math.round(k.sim*k.peso/100);
+    return `<div class="pilar-row">
+      <span class="pr-lbl">${k.lbl}</span>
+      <div class="pr-bar">
+        <div class="pr-fill" style="width:${fill}%;background:${bc(k.sim)}"></div>
+        <div class="pr-100" style="left:50%"></div>
+      </div>
+      <span class="pr-pct" style="color:${bc(k.sim)}">${pf(k.sim)}</span>
+      <span class="pr-contrib" style="color:${bc(k.sim)}">${contrib}pp</span>
+    </div>`;
+  }).join('');
+  return `<div class="pilares">
+    <h4>Contribuição por Pilar</h4>
+    ${rows}
+    <div style="font-size:9px;color:#aaa;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0">
+      Pesos: Conquista ${w.c}% · MAS ${w.m}% · TPV ${w.t}% · PRI ${w.p}%
+    </div>
+  </div>`;
+}
+
+function buildPlan(d,w,atg){
+  const items=[];
+  const gap=100-atg;
+
+  if(atg>=100){
+    items.push({cls:'ok',icon:'✅',title:'Você está na meta!',
+      desc:`ATG simulado de ${atg}% com bônus +20% garantido. Para crescer ainda mais, foque em elevar o TPV com parcelamento ativo e ampliar a aderência dos sellers de M1/M2.`,
+      tags:['Manter ritmo','Crescer TPV','Ampliar aderência']});
+  }
+
+  if(w.c>0 && sim.c<100){
+    const sellers=Math.ceil((d.m_c-d.qtd_c)>0?d.m_c-d.qtd_c:0);
+    const impact=Math.round((100-sim.c)*w.c/100);
+    items.push({cls:sim.c<50?'urg':'warn',icon:'🎯',
+      title:`Conquista em ${pf(sim.c)} — faltam ${sellers} sellers`,
+      desc:`Para chegar a 100% na Conquista, você precisa conquistar mais ${sellers} sellers com faturamento verificado acima de R$30k. Foque em varejo parcelado: vestuário, construção, eletrônicos, móveis. Valide o CNPJ antes de qualquer proposta.`,
+      tags:[`+${sellers} sellers`,'+'+impact+'pp no ATG','Varejo parcelado','Faturamento >R$30k']});
+  }
+
+  if(sim.m<100){
+    const pondMissing=Math.max(0,d.m_mas-d.pond_mas);
+    const impact=Math.round((100-sim.m)*w.m/100);
+    items.push({cls:sim.m<30?'urg':'warn',icon:'🔗',
+      title:`MAS/Aderência em ${pf(sim.m)} — ${pondMissing} pts ponderados faltando`,
+      desc:`Para atingir 100% no MAS, você precisa de mais ${pondMissing} pontos ponderados. Cada seller de M0 que atinge R$20k em M1 e M2 gera 1 ponto (ou mais, conforme a faixa). Visite os sellers conquistados, faça onboarding de Software PDV e Link de Pagamento para aumentar o faturamento deles.`,
+      tags:[`+${pondMissing} pts pond.`,'+'+impact+'pp no ATG','Onboarding PDV','Acompanhar M1/M2']});
+  }
+
+  if(sim.t<100){
+    const tpvGap=Math.max(0,d.m_tpv-d.tpv_tot);
+    const impact=Math.round((100-sim.t)*w.t/100);
+    items.push({cls:sim.t<50?'urg':'warn',icon:'💳',
+      title:`TPV em ${pf(sim.t)} — gap de ${fK(tpvGap)}`,
+      desc:`Para atingir 100% no TPV, precisa de mais ${fK(tpvGap)} em volume bruto (ou equivalente em ponderado). A forma mais rápida: ativar parcelamento nos sellers existentes (multiplica 2x) e onboarding de Mercado Crédito para os elegíveis acima de R$30k/mês.`,
+      tags:[`+${fK(tpvGap)} TPV`,'+'+impact+'pp no ATG','Parcelado ativo','Mercado Crédito']});
+  }
+
+  if(sim.p<100){
+    const impact=Math.round((100-sim.p)*w.p/100);
+    items.push({cls:sim.p<30?'urg':'warn',icon:'📈',
+      title:`PRI/Pricing em ${pf(sim.p)}`,
+      desc:`Para melhorar o PRI: aumente o share de parcelado na sua carteira (mínimo 50% do TPV), faça onboarding do Mercado Crédito para sellers elegíveis e garanta que todos os sellers de M0 tenham realizado ao menos 1 transação (PRI básico).`,
+      tags:['+'+impact+'pp no ATG','Share parcelado ≥50%','Mercado Crédito','PRI de M0']});
+  }
+
+  if(!items.length) items.push({cls:'ok',icon:'🏆',title:'Excelente simulação!',
+    desc:'Todos os pilares acima de 100%. Bônus +20% garantido. Continue o ritmo e ajude um colega a chegar na meta também.',tags:[]});
+
+  // What-if to reach 100%
+  let whatIf='';
+  if(atg<100){
+    const gaps=[];
+    if(w.c>0&&sim.c<100){const need=Math.min(200,Math.ceil(sim.c+(gap*100/w.c)));if(need>sim.c)gaps.push({k:'Conquista',from:sim.c,to:need,pp:Math.round((need-sim.c)*w.c/100)});}
+    if(sim.m<100){const need=Math.min(200,Math.ceil(sim.m+(gap*100/w.m)));if(need>sim.m)gaps.push({k:'MAS/Aderência',from:sim.m,to:need,pp:Math.round((need-sim.m)*w.m/100)});}
+    if(sim.t<100){const need=Math.min(200,Math.ceil(sim.t+(gap*100/w.t)));if(need>sim.t)gaps.push({k:'TPV',from:sim.t,to:need,pp:Math.round((need-sim.t)*w.t/100)});}
+    if(sim.p<100){const need=Math.min(200,Math.ceil(sim.p+(gap*100/w.p)));if(need>sim.p)gaps.push({k:'PRI/Pricing',from:sim.p,to:need,pp:Math.round((need-sim.p)*w.p/100)});}
+    if(gaps.length){
+      whatIf=`<div class="what-if"><div class="wi-title">Para chegar a 100% — faltam ${gap}pp</div>
+        ${gaps.slice(0,3).map(g=>`<div class="wi-row"><span class="wi-kpi">${g.k}: ${g.from}% → ${g.to}%</span><span class="wi-val">+${g.pp}pp</span></div>`).join('')}
+      </div>`;
+    }
+  }
+
+  const itemsHTML=items.map(i=>`<div class="plan-item ${i.cls}">
+    <div class="pi-icon">${i.icon}</div>
+    <div class="pi-body">
+      <div class="pi-title">${i.title}</div>
+      <div class="pi-desc">${i.desc}</div>
+      ${i.tags.length?`<div class="pi-meta">${i.tags.map(t=>`<span class="pi-tag">${t}</span>`).join('')}</div>`:''}
+    </div>
+  </div>`).join('');
+
+  return `<div class="plan-card"><h4>📋 Plano de Ação Gerado</h4>${itemsHTML}${whatIf}</div>`;
+}
+
+// ── Update sim value ──
+function updSim(k,val,el){
+  sim[k]=parseInt(val);
+  el.style=sliderBg(parseInt(val),200);
+  // Fast update: just re-render result panel (not full main)
+  const d=EXEC_DATA[curExec]; if(!d) return;
+  const w=pesos(d.tipo);
+  const atg=calcATG(sim.c,sim.m,sim.t,sim.p,d.tipo);
+  const orig=d.atg_perf;
+  const delta=atg-orig;
+  const atgC=bc(atg);
+  document.getElementById('result-panel').innerHTML=buildResultPanel(d,w,atg,delta,atgC);
+  // Update slider KPI display
+  const kMap={c:'c',m:'m',t:'t',p:'p'};
+  // Re-render full to update colors
+  renderMain();
+}
+
+// ── Init: populate selector ──
+document.addEventListener('DOMContentLoaded',function(){
+  const sel=document.getElementById('exec-sel');
+  Object.entries(EXEC_DATA).sort((a,b)=>a[1].nm.localeCompare(b[1].nm)).forEach(([nome,d])=>{
+    const opt=document.createElement('option');
+    opt.value=nome; opt.textContent=d.nm;
+    sel.appendChild(opt);
+  });
+});
+</script>
+</body>
+</html>
